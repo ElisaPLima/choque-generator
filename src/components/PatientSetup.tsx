@@ -68,7 +68,7 @@ export default function PatientSetup({ onStart, onBack }: PatientSetupProps) {
         
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
-          <h2 className="font-['Inter:Bold',sans-serif] text-[#1e2081]">
+          <h2 className="font-['Roboto:Bold',sans-serif] text-[#1e2081] text-3xl md:text-4xl">
             Modo Sandbox - Crie seu próprio paciente
           </h2>
           <button 

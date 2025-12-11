@@ -12,7 +12,7 @@ export default function LandingPage({ onModoSandbox, onModoCenario }: LandingPag
         <div className="flex flex-col items-center gap-8">
           {/* Title */}
           <div className="text-center">
-            <h1 className="font-['Roboto_Condensed:Bold',sans-serif] text-[#1e2081] mb-2">
+            <h1 className="font-['Roboto:Bold',sans-serif] text-[#1e2081] text-6xl md:text-7xl mb-2">
               Choque Generator
             </h1>
             <p className="font-['Roboto:Light',sans-serif] text-[#b8b8b8]">
