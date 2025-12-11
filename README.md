@@ -1,5 +1,5 @@
 
-  # Medical Training Platform Prototype
+  # Choque-Generator
 
   This is a code bundle for Medical Training Platform Prototype. The original project is available at https://www.figma.com/design/FHjofJXMYSj5z6sLpTvGX8/Medical-Training-Platform-Prototype.
 
