@@ -221,22 +221,22 @@ export function PatientMonitor({ vitals, isActive, muteAlerts = false }: Monitor
       backgroundColor: '#111',
       borderRadius: '8px',
       border: '2px solid #444',
-      padding: '16px',
+      padding: '8px',
       fontFamily: 'monospace',
       color: '#fff'
     }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', borderBottom: '1px solid #444', paddingBottom: '8px' }}>
-        <div style={{ fontSize: '14px', color: '#888' }}>MONITOR DE PACIENTE</div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '12px', borderBottom: '1px solid #444', paddingBottom: '8px' }}>
+        <div style={{ fontSize: '12px', color: '#888' }}>MONITOR DE PACIENTE</div>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           {alertsActive.length > 0 && (
-            <div style={{ color: '#ef4444', fontSize: '12px', fontWeight: 'bold' }}>
+            <div style={{ color: '#ef4444', fontSize: '10px', fontWeight: 'bold' }}>
               ⚠️ {alertsActive.join(' • ')}
             </div>
           )}
           <div style={{
-            width: '12px',
-            height: '12px',
+            width: '10px',
+            height: '10px',
             borderRadius: '50%',
             backgroundColor: isActive ? '#22c55e' : '#666'
           }} />
@@ -244,10 +244,10 @@ export function PatientMonitor({ vitals, isActive, muteAlerts = false }: Monitor
       </div>
 
       {/* Waveforms */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth < 640 ? '1fr' : '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
         {/* ECG */}
         <div>
-          <div style={{ fontSize: '12px', color: '#888', marginBottom: '4px' }}>ECG</div>
+          <div style={{ fontSize: '10px', color: '#888', marginBottom: '4px' }}>ECG</div>
           <canvas
             ref={ecgCanvasRef}
             width={400}
@@ -258,7 +258,7 @@ export function PatientMonitor({ vitals, isActive, muteAlerts = false }: Monitor
         
         {/* SpO2 Pleth */}
         <div>
-          <div style={{ fontSize: '12px', color: '#888', marginBottom: '4px' }}>PLETH (SpO₂)</div>
+          <div style={{ fontSize: '10px', color: '#888', marginBottom: '4px' }}>PLETH (SpO₂)</div>
           <canvas
             ref={plethCanvasRef}
             width={400}
@@ -269,82 +269,82 @@ export function PatientMonitor({ vitals, isActive, muteAlerts = false }: Monitor
       </div>
 
       {/* Vital Signs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth < 640 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '8px' }}>
         {/* HR */}
-        <div style={{ backgroundColor: '#1a1a1a', padding: '12px', borderRadius: '8px' }}>
-          <div style={{ fontSize: '11px', color: '#888' }}>FREQ. CARDÍACA</div>
-          <div style={{ fontSize: '36px', fontWeight: 'bold', color: getColor(vitals.heartRate, 'heartRate') }}>
+        <div style={{ backgroundColor: '#1a1a1a', padding: '8px', borderRadius: '8px' }}>
+          <div style={{ fontSize: '9px', color: '#888' }}>FREQ. CARDÍACA</div>
+          <div style={{ fontSize: window.innerWidth < 640 ? '24px' : '36px', fontWeight: 'bold', color: getColor(vitals.heartRate, 'heartRate') }}>
             {Math.round(vitals.heartRate)}
           </div>
-          <div style={{ fontSize: '10px', color: '#666' }}>bpm</div>
+          <div style={{ fontSize: '8px', color: '#666' }}>bpm</div>
         </div>
 
         {/* BP */}
-        <div style={{ backgroundColor: '#1a1a1a', padding: '12px', borderRadius: '8px' }}>
-          <div style={{ fontSize: '11px', color: '#888' }}>PRESSÃO ARTERIAL</div>
-          <div style={{ fontSize: '28px', fontWeight: 'bold', color: getColor(vitals.systolic, 'systolic') }}>
-            {Math.round(vitals.systolic)}<span style={{ fontSize: '20px' }}>/</span>{Math.round(vitals.diastolic)}
+        <div style={{ backgroundColor: '#1a1a1a', padding: '8px', borderRadius: '8px' }}>
+          <div style={{ fontSize: '9px', color: '#888' }}>PRESSÃO ARTERIAL</div>
+          <div style={{ fontSize: window.innerWidth < 640 ? '18px' : '28px', fontWeight: 'bold', color: getColor(vitals.systolic, 'systolic') }}>
+            {Math.round(vitals.systolic)}<span style={{ fontSize: window.innerWidth < 640 ? '14px' : '20px' }}>/</span>{Math.round(vitals.diastolic)}
           </div>
-          <div style={{ fontSize: '10px', color: '#666' }}>
+          <div style={{ fontSize: '8px', color: '#666' }}>
             PAM: <span style={{ color: getColor(vitals.map, 'map'), fontWeight: 'bold' }}>{Math.round(vitals.map)}</span> mmHg
           </div>
         </div>
 
         {/* SpO2 */}
-        <div style={{ backgroundColor: '#1a1a1a', padding: '12px', borderRadius: '8px' }}>
-          <div style={{ fontSize: '11px', color: '#888' }}>SAT. O₂</div>
-          <div style={{ fontSize: '36px', fontWeight: 'bold', color: getColor(vitals.spO2, 'spO2') }}>
+        <div style={{ backgroundColor: '#1a1a1a', padding: '8px', borderRadius: '8px' }}>
+          <div style={{ fontSize: '9px', color: '#888' }}>SAT. O₂</div>
+          <div style={{ fontSize: window.innerWidth < 640 ? '24px' : '36px', fontWeight: 'bold', color: getColor(vitals.spO2, 'spO2') }}>
             {Math.round(vitals.spO2)}
           </div>
-          <div style={{ fontSize: '10px', color: '#666' }}>%</div>
+          <div style={{ fontSize: '8px', color: '#666' }}>%</div>
         </div>
 
         {/* Resp Rate */}
-        <div style={{ backgroundColor: '#1a1a1a', padding: '12px', borderRadius: '8px' }}>
-          <div style={{ fontSize: '11px', color: '#888' }}>FREQ. RESP.</div>
-          <div style={{ fontSize: '36px', fontWeight: 'bold', color: getColor(vitals.respiratoryRate, 'respiratoryRate') }}>
+        <div style={{ backgroundColor: '#1a1a1a', padding: '8px', borderRadius: '8px' }}>
+          <div style={{ fontSize: '9px', color: '#888' }}>FREQ. RESP.</div>
+          <div style={{ fontSize: window.innerWidth < 640 ? '24px' : '36px', fontWeight: 'bold', color: getColor(vitals.respiratoryRate, 'respiratoryRate') }}>
             {Math.round(vitals.respiratoryRate)}
           </div>
-          <div style={{ fontSize: '10px', color: '#666' }}>rpm</div>
+          <div style={{ fontSize: '8px', color: '#666' }}>rpm</div>
         </div>
 
         {/* Temperature */}
-        <div style={{ backgroundColor: '#1a1a1a', padding: '12px', borderRadius: '8px' }}>
-          <div style={{ fontSize: '11px', color: '#888' }}>TEMPERATURA</div>
-          <div style={{ fontSize: '36px', fontWeight: 'bold', color: getColor(vitals.temperature, 'temperature') }}>
+        <div style={{ backgroundColor: '#1a1a1a', padding: '8px', borderRadius: '8px' }}>
+          <div style={{ fontSize: '9px', color: '#888' }}>TEMPERATURA</div>
+          <div style={{ fontSize: window.innerWidth < 640 ? '24px' : '36px', fontWeight: 'bold', color: getColor(vitals.temperature, 'temperature') }}>
             {vitals.temperature.toFixed(1)}
           </div>
-          <div style={{ fontSize: '10px', color: '#666' }}>°C</div>
+          <div style={{ fontSize: '8px', color: '#666' }}>°C</div>
         </div>
 
         {/* CVP */}
-        <div style={{ backgroundColor: '#1a1a1a', padding: '12px', borderRadius: '8px' }}>
-          <div style={{ fontSize: '11px', color: '#888' }}>PVC</div>
-          <div style={{ fontSize: '36px', fontWeight: 'bold', color: getColor(vitals.cvp, 'cvp') }}>
+        <div style={{ backgroundColor: '#1a1a1a', padding: '8px', borderRadius: '8px' }}>
+          <div style={{ fontSize: '9px', color: '#888' }}>PVC</div>
+          <div style={{ fontSize: window.innerWidth < 640 ? '24px' : '36px', fontWeight: 'bold', color: getColor(vitals.cvp, 'cvp') }}>
             {Math.round(vitals.cvp)}
           </div>
-          <div style={{ fontSize: '10px', color: '#666' }}>mmHg</div>
+          <div style={{ fontSize: '8px', color: '#666' }}>mmHg</div>
         </div>
       </div>
 
       {/* Hemodynamics */}
-      <div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#1a1a1a', borderRadius: '8px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', fontSize: '14px' }}>
+      <div style={{ marginTop: '12px', padding: '8px', backgroundColor: '#1a1a1a', borderRadius: '8px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth < 640 ? '1fr' : 'repeat(2, 1fr)', gap: '8px', fontSize: '12px' }}>
           <div>
             <span style={{ color: '#888' }}>Débito Cardíaco: </span>
             <span style={{ color: '#06b6d4', fontWeight: 'bold' }}>{vitals.cardiacOutput.toFixed(1)}</span>
-            <span style={{ color: '#666', fontSize: '11px' }}> L/min</span>
+            <span style={{ color: '#666', fontSize: '10px' }}> L/min</span>
           </div>
           <div>
             <span style={{ color: '#888' }}>RVS: </span>
             <span style={{ color: '#06b6d4', fontWeight: 'bold' }}>{Math.round(vitals.svr)}</span>
-            <span style={{ color: '#666', fontSize: '11px' }}> dinas·s/cm⁵</span>
+            <span style={{ color: '#666', fontSize: '10px' }}> dinas·s/cm⁵</span>
           </div>
           {vitals.pcwp !== undefined && (
             <div>
               <span style={{ color: '#888' }}>POAP: </span>
               <span style={{ color: '#06b6d4', fontWeight: 'bold' }}>{vitals.pcwp.toFixed(1)}</span>
-              <span style={{ color: '#666', fontSize: '11px' }}> mmHg</span>
+              <span style={{ color: '#666', fontSize: '10px' }}> mmHg</span>
             </div>
           )}
           {vitals.pvr !== undefined && (

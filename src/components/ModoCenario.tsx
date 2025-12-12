@@ -16,28 +16,28 @@ export default function ModoCenario({ onSelectScenario, onRandomScenario, onBack
   ];
 
   return (
-    <div className="bg-[#dfdfdf] relative w-full min-h-screen flex items-center justify-center">
-      <div className="bg-[#ebf5ff] rounded-[19px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] w-[min(1234px,90vw)] p-8 md:p-16 relative">
+    <div className="bg-[#dfdfdf] relative w-full min-h-screen flex items-center justify-center px-4 py-8">
+      <div className="bg-[#ebf5ff] rounded-[19px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] w-full max-w-[1234px] p-6 md:p-16 relative">
         
         {/* Title */}
-        <div className="mb-8">
-          <h1 className="font-['Roboto_Condensed:Bold',sans-serif] text-[#1e2081] mb-8">
+        <div className="mb-6 md:mb-8">
+          <h1 className="font-['Roboto_Condensed:Bold',sans-serif] text-[#1e2081] text-3xl md:text-4xl lg:text-5xl mb-6 md:mb-8">
             Modo Cenário
           </h1>
           
           {/* Random Scenario Button */}
           <button 
-            className="bg-[#1e2081] rounded-[8px] border border-[#2c2c2c] px-6 py-3 hover:bg-[#2a2c9f] transition-colors"
+            className="bg-[#1e2081] rounded-[8px] border border-[#2c2c2c] px-6 py-3 hover:bg-[#2a2c9f] transition-colors w-full sm:w-auto"
             onClick={onRandomScenario}
           >
-            <p className="font-['Inter:Bold',sans-serif] text-neutral-100">
+            <p className="font-['Inter:Bold',sans-serif] text-neutral-100 text-sm md:text-base">
               Iniciar cenário aleatório
             </p>
           </button>
         </div>
 
         {/* Scenario Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 md:gap-8 mt-8 md:mt-12">
           {scenarios.map((scenario, index) => (
             <button
               key={index}
@@ -45,14 +45,14 @@ export default function ModoCenario({ onSelectScenario, onRandomScenario, onBack
               className="bg-[#1e2081] rounded-[17px] overflow-hidden hover:scale-105 transition-transform cursor-pointer"
             >
               {/* Patient Name Header */}
-              <div className="py-6 px-4">
-                <h3 className="font-['Inter:Bold',sans-serif] text-[25px] text-center text-white">
+              <div className="py-4 md:py-6 px-4">
+                <h3 className="font-['Inter:Bold',sans-serif] text-xl md:text-[25px] text-center text-white">
                   {scenario.name}
                 </h3>
               </div>
               
               {/* Patient Image */}
-              <div className="bg-white rounded-t-[14px] h-[196px] overflow-hidden">
+              <div className="bg-white rounded-t-[14px] h-[150px] md:h-[196px] overflow-hidden">
                 <img 
                   src={scenario.image} 
                   alt={scenario.name}
@@ -66,14 +66,14 @@ export default function ModoCenario({ onSelectScenario, onRandomScenario, onBack
         {/* Back Button */}
         <button 
           onClick={onBack}
-          className="mt-8 bg-[#2c2c2c] rounded-[8px] px-6 py-3 hover:bg-[#3c3c3c] transition-colors"
+          className="mt-6 md:mt-8 bg-[#2c2c2c] rounded-[8px] px-6 py-3 hover:bg-[#3c3c3c] transition-colors w-full sm:w-auto"
         >
-          <p className="font-['Inter:Bold',sans-serif] text-neutral-100">Voltar</p>
+          <p className="font-['Inter:Bold',sans-serif] text-neutral-100 text-sm md:text-base">Voltar</p>
         </button>
       </div>
 
       {/* Footer Credits */}
-      <div className="absolute bottom-8 right-8 text-right text-white">
+      <div className="absolute bottom-4 md:bottom-8 right-4 md:right-8 text-right text-white text-xs md:text-sm">
         <p className="font-['Roboto:Bold',sans-serif] mb-0">Modelo em fase de testes.</p>
         <p className="font-['Roboto:Bold',sans-serif]">Créditos: Elisa Patiño Lima e Pedro Cerqueira</p>
       </div>

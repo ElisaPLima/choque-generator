@@ -650,36 +650,36 @@ export default function Simulation({ patientData, onBack }: SimulationProps) {
   );
 
   return (
-    <div className="bg-[#dfdfdf] min-h-screen w-full overflow-x-auto pb-20 pt-0 m-0">
+    <div className="bg-[#dfdfdf] min-h-screen w-full overflow-x-hidden pb-20 pt-0 m-0">
       {/* Outcome Modal */}
       {outcomeResult && outcomeResult.outcome !== PatientOutcome.ONGOING && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
-          <div className="bg-white rounded-[19px] shadow-2xl p-8 max-w-2xl w-full mx-4">
-            <div className="text-center mb-6">
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-[19px] shadow-2xl p-4 md:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="text-center mb-4 md:mb-6">
               {outcomeResult.outcome === PatientOutcome.SURVIVED ? (
                 <>
-                  <Trophy className="w-24 h-24 text-green-500 mx-auto mb-4" />
-                  <h2 className="text-4xl font-bold text-green-600">PACIENTE SOBREVIVEU!</h2>
+                  <Trophy className="w-16 h-16 md:w-24 md:h-24 text-green-500 mx-auto mb-4" />
+                  <h2 className="text-2xl md:text-4xl font-bold text-green-600">PACIENTE SOBREVIVEU!</h2>
                 </>
               ) : (
                 <>
-                  <Skull className="w-24 h-24 text-red-500 mx-auto mb-4" />
-                  <h2 className="text-4xl font-bold text-red-600">PACIENTE FOI A ÓBITO</h2>
+                  <Skull className="w-16 h-16 md:w-24 md:h-24 text-red-500 mx-auto mb-4" />
+                  <h2 className="text-2xl md:text-4xl font-bold text-red-600">PACIENTE FOI A ÓBITO</h2>
                 </>
               )}
             </div>
             
-            <div className="bg-gray-50 rounded-lg p-6 mb-6">
-              <pre className="whitespace-pre-wrap font-sans text-sm">
+            <div className="bg-gray-50 rounded-lg p-3 md:p-6 mb-4 md:mb-6">
+              <pre className="whitespace-pre-wrap font-sans text-xs md:text-sm">
                 {generateOutcomeFeedback(outcomeResult, simulationState, patientData)}
               </pre>
             </div>
 
             {/* Critical state summary if patient died */}
             {outcomeResult.outcome === PatientOutcome.DIED && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                <h3 className="font-bold text-red-800 mb-2">Estado Crítico:</h3>
-                <p className="text-sm text-red-700">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 md:p-4 mb-4 md:mb-6">
+                <h3 className="font-bold text-red-800 mb-2 text-sm md:text-base">Estado Crítico:</h3>
+                <p className="text-xs md:text-sm text-red-700">
                   • Episódios críticos: {criticalTracker.incompatibleVitalsCount}<br/>
                   • Tempo total em estado crítico: {criticalTracker.incompatibleVitalsDuration.toFixed(0)} min<br/>
                   • Tempo desde última recuperação: {criticalTracker.timeSinceLastRecovery.toFixed(0)} min
@@ -689,9 +689,9 @@ export default function Simulation({ patientData, onBack }: SimulationProps) {
 
             {/* Stability metrics if patient survived */}
             {outcomeResult.outcome === PatientOutcome.SURVIVED && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-                <h3 className="font-bold text-green-800 mb-2">Estabilidade Alcançada:</h3>
-                <p className="text-sm text-green-700">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3 md:p-4 mb-4 md:mb-6">
+                <h3 className="font-bold text-green-800 mb-2 text-sm md:text-base">Estabilidade Alcançada:</h3>
+                <p className="text-xs md:text-sm text-green-700">
                   • Duração da estabilidade: {simulationState.stabilityDuration.toFixed(0)} min<br/>
                   • PAM final: {simulationState.vitals.map.toFixed(0)} mmHg<br/>
                   • Lactato final: {simulationState.labs.lactate.toFixed(1)} mmol/L<br/>
@@ -700,10 +700,10 @@ export default function Simulation({ patientData, onBack }: SimulationProps) {
               </div>
             )}
 
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
               <button
                 onClick={onBack}
-                className="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-bold shadow-lg transition-colors"
+                className="flex-1 px-4 md:px-6 py-2 md:py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-bold shadow-lg transition-colors text-sm md:text-base"
               >
                 Voltar ao Menu
               </button>
@@ -712,7 +712,7 @@ export default function Simulation({ patientData, onBack }: SimulationProps) {
                   setOutcomeResult(null);
                   window.location.reload();
                 }}
-                className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-lg transition-colors"
+                className="flex-1 px-4 md:px-6 py-2 md:py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-lg transition-colors text-sm md:text-base"
               >
                 Novo Caso
               </button>
@@ -721,10 +721,10 @@ export default function Simulation({ patientData, onBack }: SimulationProps) {
         </div>
       )}
 
-      <div className="bg-[#ebf5ff] rounded-[19px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] min-h-[2000px] mx-auto mt-0 mb-[45px] w-[1580px] flex gap-8 p-8 pt-20">
+      <div className="bg-[#ebf5ff] rounded-[19px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] min-h-screen mx-auto mt-0 mb-[45px] max-w-[1580px] w-full flex flex-col lg:flex-row gap-4 md:gap-8 p-4 md:p-8 pt-8 md:pt-20">
         
         {/* LEFT COLUMN */}
-        <div className="flex-shrink-0 w-[920px]">
+        <div className="flex-shrink-0 w-full lg:w-[920px]">
           {/* Live Patient Monitor */}
           <PatientMonitor
             vitals={simulationState.vitals}
@@ -733,41 +733,41 @@ export default function Simulation({ patientData, onBack }: SimulationProps) {
           />
           
           {/* Time displays below monitor */}
-          <div className="flex gap-4 mt-4 items-center">
-            <div className="bg-white px-4 py-2 rounded-lg shadow font-mono">
-              <div className="text-xs text-gray-500">Tempo Real</div>
-              <div className="text-lg font-bold">{formatRealTime(realTimeElapsed)}</div>
+          <div className="flex flex-wrap gap-2 md:gap-4 mt-4 items-center">
+            <div className="bg-white px-2 md:px-4 py-1 md:py-2 rounded-lg shadow font-mono">
+              <div className="text-[10px] md:text-xs text-gray-500">Tempo Real</div>
+              <div className="text-sm md:text-lg font-bold">{formatRealTime(realTimeElapsed)}</div>
             </div>
-            <div className="bg-white px-4 py-2 rounded-lg shadow font-mono">
-              <div className="text-xs text-gray-500">Tempo Simulação ({speedMultiplier}x)</div>
-              <div className="text-lg font-bold">{formatSimTime(simTimeElapsed)}</div>
+            <div className="bg-white px-2 md:px-4 py-1 md:py-2 rounded-lg shadow font-mono">
+              <div className="text-[10px] md:text-xs text-gray-500">Tempo Sim ({speedMultiplier}x)</div>
+              <div className="text-sm md:text-lg font-bold">{formatSimTime(simTimeElapsed)}</div>
             </div>
 
             {/* Patient Status Indicator */}
             {criticalTracker.reasonsForIncompatibility.length > 0 ? (
-              <div className="bg-red-100 border-2 border-red-500 px-4 py-2 rounded-lg shadow animate-pulse">
-                <div className="text-xs font-bold text-red-700">⚠️ ESTADO CRÍTICO</div>
-                <div className="text-sm text-red-600">{criticalTracker.timeSinceLastRecovery.toFixed(0)} min</div>
+              <div className="bg-red-100 border-2 border-red-500 px-2 md:px-4 py-1 md:py-2 rounded-lg shadow animate-pulse">
+                <div className="text-[10px] md:text-xs font-bold text-red-700">⚠️ CRÍTICO</div>
+                <div className="text-xs md:text-sm text-red-600">{criticalTracker.timeSinceLastRecovery.toFixed(0)} min</div>
               </div>
             ) : simulationState.stabilityDuration >= 30 ? (
-              <div className="bg-green-100 border-2 border-green-500 px-4 py-2 rounded-lg shadow">
-                <div className="text-xs font-bold text-green-700">✓ ESTÁVEL</div>
-                <div className="text-sm text-green-600">{simulationState.stabilityDuration.toFixed(0)} min</div>
+              <div className="bg-green-100 border-2 border-green-500 px-2 md:px-4 py-1 md:py-2 rounded-lg shadow">
+                <div className="text-[10px] md:text-xs font-bold text-green-700">✓ ESTÁVEL</div>
+                <div className="text-xs md:text-sm text-green-600">{simulationState.stabilityDuration.toFixed(0)} min</div>
               </div>
             ) : (
-              <div className="bg-yellow-100 border-2 border-yellow-500 px-4 py-2 rounded-lg shadow">
-                <div className="text-xs font-bold text-yellow-700">⚡ INSTÁVEL</div>
-                <div className="text-sm text-yellow-600">Monitorar</div>
+              <div className="bg-yellow-100 border-2 border-yellow-500 px-2 md:px-4 py-1 md:py-2 rounded-lg shadow">
+                <div className="text-[10px] md:text-xs font-bold text-yellow-700">⚡ INSTÁVEL</div>
+                <div className="text-xs md:text-sm text-yellow-600">Monitorar</div>
               </div>
             )}
             
             {/* Speed Control */}
-            <div className="bg-white px-4 py-2 rounded-lg shadow">
-              <div className="text-xs text-gray-500 mb-1">Velocidade</div>
-              <div className="flex items-center gap-2">
+            <div className="bg-white px-2 md:px-4 py-1 md:py-2 rounded-lg shadow hidden sm:block">
+              <div className="text-[10px] md:text-xs text-gray-500 mb-1">Velocidade</div>
+              <div className="flex items-center gap-1 md:gap-2">
                 <button
                   onClick={() => setSpeedMultiplier(Math.max(1, speedMultiplier - 1))}
-                  className="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm font-bold"
+                  className="px-1 md:px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-xs md:text-sm font-bold"
                 >
                   -
                 </button>
@@ -777,20 +777,20 @@ export default function Simulation({ patientData, onBack }: SimulationProps) {
                   max="100"
                   value={speedMultiplier}
                   onChange={(e) => setSpeedMultiplier(Number(e.target.value))}
-                  className="w-24"
+                  className="w-16 md:w-24"
                 />
                 <button
                   onClick={() => setSpeedMultiplier(Math.min(100, speedMultiplier + 1))}
-                  className="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm font-bold"
+                  className="px-1 md:px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-xs md:text-sm font-bold"
                 >
                   +
                 </button>
-                <span className="text-sm font-bold w-12 text-center">{speedMultiplier}x</span>
+                <span className="text-xs md:text-sm font-bold w-8 md:w-12 text-center">{speedMultiplier}x</span>
               </div>
             </div>
             <button
               onClick={() => setIsPlaying(!isPlaying)}
-              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-bold shadow-lg transition-colors ${
+              className={`flex items-center gap-1 md:gap-2 px-3 md:px-6 py-2 md:py-3 rounded-lg font-bold shadow-lg transition-colors ${
                 isPlaying
                   ? 'bg-red-500 hover:bg-red-600 text-white'
                   : 'bg-green-500 hover:bg-green-600 text-white'
@@ -799,13 +799,13 @@ export default function Simulation({ patientData, onBack }: SimulationProps) {
             >
               {isPlaying ? (
                 <>
-                  <Pause className="w-5 h-5" />
-                  <span>Pausar</span>
+                  <Pause className="w-4 h-4 md:w-5 md:h-5" />
+                  <span className="text-xs md:text-base">Pausar</span>
                 </>
               ) : (
                 <>
-                  <Play className="w-5 h-5" />
-                  <span>Iniciar</span>
+                  <Play className="w-4 h-4 md:w-5 md:h-5" />
+                  <span className="text-xs md:text-base">Iniciar</span>
                 </>
               )}
             </button>

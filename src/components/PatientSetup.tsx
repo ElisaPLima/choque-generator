@@ -271,30 +271,30 @@ export default function PatientSetup({ onStart, onBack }: PatientSetupProps) {
 
   return (
     <div className="bg-[#dfdfdf] min-h-screen w-full p-4 md:p-8">
-      <div className="bg-[#ebf5ff] rounded-[19px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] max-w-[1240px] mx-auto p-8">
+      <div className="bg-[#ebf5ff] rounded-[19px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] max-w-[1240px] mx-auto p-4 md:p-8">
         
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-[#1e2081] text-3xl md:text-4xl">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 md:mb-8 gap-4">
+          <h2 className="text-[#1e2081] text-xl sm:text-2xl md:text-3xl lg:text-4xl">
             <span className="font-['Roboto:Black',sans-serif]">Modo Sandbox</span>
-            <span className="font-['Roboto:Bold',sans-serif]"> - Crie seu próprio paciente</span>
+            <span className="font-['Roboto:Bold',sans-serif] block sm:inline"> - Crie seu próprio paciente</span>
           </h2>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-500">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 w-full lg:w-auto">
+            <span className="text-xs md:text-sm text-gray-500">
               <span className="font-bold">e.d.</span> = em desenvolvimento
             </span>
             <button 
-              className="bg-[#2c2c2c] rounded-[8px] border border-[#2c2c2c] px-6 py-3 hover:bg-[#3c3c3c] transition-colors"
+              className="bg-[#2c2c2c] rounded-[8px] border border-[#2c2c2c] px-4 md:px-6 py-2 md:py-3 hover:bg-[#3c3c3c] transition-colors w-full sm:w-auto"
               onClick={() => setShowImportModal(true)}
             >
-              <p className="font-['Inter:Bold',sans-serif] text-neutral-100">Importar paciente</p>
+              <p className="font-['Inter:Bold',sans-serif] text-neutral-100 text-sm md:text-base">Importar paciente</p>
             </button>
           </div>
         </div>
 
         {/* Left Column - Dropdowns */}
-        <div className="grid md:grid-cols-[300px_1fr] gap-8">
-          <div className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 md:gap-8">
+          <div className="space-y-4 md:space-y-6">
             {/* Difficulty Level */}
             <div>
               <p className="font-['Inter:Regular',sans-serif] text-[#757575] mb-2">
