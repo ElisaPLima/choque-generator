@@ -54,12 +54,12 @@ export default function App() {
       difficulty: 'Clínico',
       resourceLevel: 'Alto',
       shockType: 'Choque distributivo',
-      rvs: 1200,
-      rvp: 2,
+      rvs: 480,
+      rvp: 1.5,
       volemia: 'Desidratado',
-      ivs: 35,
-      pvc: 10,
-      poap: 8
+      ivs: 70,
+      pvc: 6,
+      poap: 10
     };
     navigateToSimulation(scenarioData);
   };

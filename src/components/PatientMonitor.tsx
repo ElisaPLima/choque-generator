@@ -340,6 +340,20 @@ export function PatientMonitor({ vitals, isActive, muteAlerts = false }: Monitor
             <span style={{ color: '#06b6d4', fontWeight: 'bold' }}>{Math.round(vitals.svr)}</span>
             <span style={{ color: '#666', fontSize: '11px' }}> dinas·s/cm⁵</span>
           </div>
+          {vitals.pcwp !== undefined && (
+            <div>
+              <span style={{ color: '#888' }}>POAP: </span>
+              <span style={{ color: '#06b6d4', fontWeight: 'bold' }}>{vitals.pcwp.toFixed(1)}</span>
+              <span style={{ color: '#666', fontSize: '11px' }}> mmHg</span>
+            </div>
+          )}
+          {vitals.pvr !== undefined && (
+            <div>
+              <span style={{ color: '#888' }}>RVP: </span>
+              <span style={{ color: '#06b6d4', fontWeight: 'bold' }}>{vitals.pvr.toFixed(1)}</span>
+              <span style={{ color: '#666', fontSize: '11px' }}> Wood units</span>
+            </div>
+          )}
         </div>
       </div>
     </div>

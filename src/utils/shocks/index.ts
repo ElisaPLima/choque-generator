@@ -16,3 +16,4 @@ export {
 export { cardiogenicShock, progressCardiogenicShock, cardiogenicInotropeResponse, cardiogenicFluidRisk } from './cardiogenic';
 export { hypovolemicShock, progressHypovolemicShock, hypovolemicFluidResponse, assessFluidResponsiveness } from './hypovolemic';
 export { obstructiveShock, progressObstructiveShock, detectObstructivePattern, obstructiveDefinitiveIntervention } from './obstructive';
+export { mixedShock, progressMixedShock, identifyDominantComponent } from './mixed';

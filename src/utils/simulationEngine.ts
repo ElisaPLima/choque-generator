@@ -7,7 +7,15 @@ import { distributiveShock, progressDistributiveShock } from './shocks/distribut
 import { cardiogenicShock, progressCardiogenicShock } from './shocks/cardiogenic';
 import { hypovolemicShock, progressHypovolemicShock } from './shocks/hypovolemic';
 import { obstructiveShock, progressObstructiveShock } from './shocks/obstructive';
+import { mixedShock, progressMixedShock } from './shocks/mixed';
 import { randomizeVitalSigns, randomizeHemodynamics, randomizeLabValues } from './randomization';
+import { 
+  applyComorbiditiesToVitals, 
+  applyComorbiditiesToHemodynamics, 
+  applyComorbiditiesToLabs,
+  getDeteriorationRateModifier 
+} from './comorbidities';
+import { calculateVentilationHemodynamicEffects } from './ventilation';
 
 // Calculate Mean Arterial Pressure from systolic and diastolic
 export function calculateMAP(systolic: number, diastolic: number): number {
@@ -104,6 +112,9 @@ export function initializeVitals(patientData: PatientData): VitalSigns {
     case 'Choque obstrutivo':
       baseVitals = obstructiveShock.initialVitals;
       break;
+    case 'Choque misto':
+      baseVitals = mixedShock.initialVitals;
+      break;
     default:
       baseVitals = distributiveShock.initialVitals;
   }
@@ -134,15 +145,20 @@ export function initializeVitals(patientData: PatientData): VitalSigns {
     spO2: applyDifficulty(baseVitals.spO2 || 92, 98),
     respiratoryRate: applyDifficulty(baseVitals.respiratoryRate || 20, 16),
     temperature: applyDifficulty(baseVitals.temperature || 37, 37),
-    cvp: applyDifficulty(baseVitals.cvp || 5, 5),
+    cvp: patientData.pvc, // Use user-defined PVC (Pressão Venosa Central)
+    pcwp: patientData.poap, // Use user-defined POAP (Pressão de Oclusão da Artéria Pulmonar)
     cardiacOutput: baseVitals.cardiacOutput || 5.0,
-    svr: baseVitals.svr || 1000,
+    svr: patientData.rvs, // Use user-defined RVS (Resistência Vascular Sistêmica)
+    pvr: patientData.rvp, // Use user-defined RVP (Resistência Vascular Pulmonar)
   };
   
   // Recalculate MAP with adjusted values
   vitals.map = calculateMAP(vitals.systolic, vitals.diastolic);
   
-  return vitals;
+  // Apply comorbidity effects
+  const vitalsWithComorbidities = applyComorbiditiesToVitals(vitals, patientData.conditions);
+  
+  return vitalsWithComorbidities;
 }
 
 // Initialize hemodynamic state
@@ -162,6 +178,9 @@ export function initializeHemodynamics(patientData: PatientData): HemodynamicSta
     case 'Choque obstrutivo':
       baseHemodynamics = obstructiveShock.initialHemodynamics;
       break;
+    case 'Choque misto':
+      baseHemodynamics = mixedShock.initialHemodynamics;
+      break;
     default:
       baseHemodynamics = distributiveShock.initialHemodynamics;
   }
@@ -169,13 +188,31 @@ export function initializeHemodynamics(patientData: PatientData): HemodynamicSta
   // Apply randomization to create variation while maintaining shock characteristics
   baseHemodynamics = randomizeHemodynamics(baseHemodynamics, patientData.shockType);
   
+  // Calculate preload from volemia status
+  let preloadValue = baseHemodynamics.preload || 50;
+  if (patientData.volemia === 'Desidratado') {
+    preloadValue = 25; // Low preload
+  } else if (patientData.volemia === 'Hipervolêmico') {
+    preloadValue = 85; // High preload
+  } else if (patientData.volemia === 'Normal') {
+    preloadValue = 55; // Normal preload
+  }
+  
   return {
-    preload: baseHemodynamics.preload || 50,
+    preload: preloadValue,
     contractility: baseHemodynamics.contractility || 65,
     afterload: baseHemodynamics.afterload || 60,
     heartRate: baseHemodynamics.heartRate || 100,
-    strokeVolume: baseHemodynamics.strokeVolume || 60,
+    strokeVolume: patientData.ivs, // Use user-defined IVS (Índice de Volume Sistólico)
   };
+}
+
+// Apply comorbidity effects to hemodynamics
+function applyComorbidityEffectsToHemodynamics(
+  hemodynamics: HemodynamicState,
+  conditions: string[]
+): HemodynamicState {
+  return applyComorbiditiesToHemodynamics(hemodynamics, conditions);
 }
 
 // Initialize lab values based on shock type
@@ -195,6 +232,9 @@ export function initializeLabs(patientData: PatientData): LabValues {
     case 'Choque obstrutivo':
       baseLabProfile = obstructiveShock.labProfile;
       break;
+    case 'Choque misto':
+      baseLabProfile = mixedShock.labProfile;
+      break;
     default:
       baseLabProfile = distributiveShock.labProfile;
   }
@@ -202,7 +242,7 @@ export function initializeLabs(patientData: PatientData): LabValues {
   // Apply randomization to create variation while maintaining diagnostic patterns
   baseLabProfile = randomizeLabValues(baseLabProfile, patientData.shockType);
   
-  return {
+  const labs: LabValues = {
     pH: baseLabProfile.pH || 7.35,
     pCO2: baseLabProfile.pCO2 || 40,
     pO2: baseLabProfile.pO2 || 80,
@@ -230,6 +270,11 @@ export function initializeLabs(patientData: PatientData): LabValues {
       baseLabProfile.crp || (Math.random() * 150 + 50) : undefined,
     initialLactate: baseLabProfile.lactate || 2.0,
   };
+  
+  // Apply comorbidity effects to labs
+  const labsWithComorbidities = applyComorbiditiesToLabs(labs, patientData.conditions);
+  
+  return labsWithComorbidities;
 }
 
 // Update vitals based on current state, interventions, and time
@@ -238,7 +283,7 @@ export function updateVitals(
   patientData: PatientData,
   deltaTime: number // simulation minutes since last update
 ): VitalSigns {
-  const { vitals, hemodynamics, activeInterventions, fluidBalance } = currentState;
+  const { vitals, hemodynamics, activeInterventions, fluidBalance, ventilation } = currentState;
   
   // Start with current vitals
   let newVitals = { ...vitals };
@@ -251,11 +296,14 @@ export function updateVitals(
   // Apply shock-specific progression
   let shockProgression: Partial<VitalSigns> = {};
   
+  // Get comorbidity deterioration rate modifier
+  const deteriorationModifier = getDeteriorationRateModifier(patientData.conditions);
+  
   switch (patientData.shockType) {
     case 'Choque distributivo':
       shockProgression = progressDistributiveShock(
         newVitals,
-        currentState.simTimeElapsed,
+        currentState.simTimeElapsed * deteriorationModifier, // Accelerate/decelerate based on comorbidities
         hasVasopressors,
         hasFluids,
         currentState.distributiveShockState
@@ -265,7 +313,7 @@ export function updateVitals(
     case 'Choque cardiogênico':
       shockProgression = progressCardiogenicShock(
         newVitals,
-        currentState.simTimeElapsed,
+        currentState.simTimeElapsed * deteriorationModifier,
         hasInotropes,
         hasVasopressors,
         fluidBalance.netBalance
@@ -275,7 +323,7 @@ export function updateVitals(
     case 'Choque hipovolêmico':
       shockProgression = progressHypovolemicShock(
         newVitals,
-        currentState.simTimeElapsed,
+        currentState.simTimeElapsed * deteriorationModifier,
         hasFluids,
         fluidBalance.netBalance,
         false, // TODO: track ongoing blood loss
@@ -287,7 +335,7 @@ export function updateVitals(
     case 'Choque obstrutivo':
       shockProgression = progressObstructiveShock(
         newVitals,
-        currentState.simTimeElapsed,
+        currentState.simTimeElapsed * deteriorationModifier,
         false, // TODO: track if obstruction resolved
         hasVasopressors || hasFluids
       );
@@ -296,6 +344,18 @@ export function updateVitals(
   
   // Merge shock progression
   newVitals = { ...newVitals, ...shockProgression };
+  
+  // Apply ventilation hemodynamic effects (if intubated)
+  if (ventilation.isIntubated) {
+    const ventEffects = calculateVentilationHemodynamicEffects(
+      ventilation,
+      newVitals,
+      hemodynamics,
+      patientData.shockType
+    );
+    newVitals = { ...newVitals, ...ventEffects.vitals };
+    // Hemodynamics will be updated in the component
+  }
   
   // Apply baroreceptor compensation
   const compensation = baroreceptorCompensation(newVitals.map, newVitals.heartRate, newVitals.svr);

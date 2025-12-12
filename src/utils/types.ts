@@ -9,8 +9,23 @@ export interface VitalSigns {
   respiratoryRate: number; // breaths/min
   temperature: number; // °C
   cvp: number; // Central Venous Pressure - mmHg
+  pcwp?: number; // Pulmonary Capillary Wedge Pressure (POAP) - mmHg
   cardiacOutput: number; // L/min
   svr: number; // Systemic Vascular Resistance - dinas.seg/cm⁻⁵
+  pvr?: number; // Pulmonary Vascular Resistance - dinas.seg/cm⁻⁵
+}
+
+export interface VentilationSettings {
+  isIntubated: boolean;
+  mode: 'VCV' | 'PCV' | 'PSV' | 'SIMV' | null; // Ventilation modes
+  tidalVolume: number; // mL
+  respiratoryRate: number; // breaths/min
+  peep: number; // cmH2O - Positive End-Expiratory Pressure
+  fio2: number; // 0.21-1.0 (21-100%)
+  pressureSupport?: number; // cmH2O
+  inspiratoryPressure?: number; // cmH2O (for PCV)
+  plateauPressure?: number; // cmH2O (measured)
+  peakPressure?: number; // cmH2O (measured)
 }
 
 export interface LabValues {
@@ -86,6 +101,7 @@ export interface SimulationState {
   fluidBalance: FluidBalance;
   hemodynamics: HemodynamicState;
   activeInterventions: ActiveIntervention[];
+  ventilation: VentilationSettings;
   
   // Time tracking (all in simulation time - minutes)
   simTimeElapsed: number; // total simulation time in minutes
@@ -99,6 +115,10 @@ export interface SimulationState {
   // Alert states
   criticalAlerts: string[];
   warnings: string[];
+  
+  // Outcome tracking
+  stabilityDuration: number; // minutes of sustained stability
+  initialLactate: number; // for tracking lactate clearance
   
   // Distributive shock specific state (optional)
   distributiveShockState?: {

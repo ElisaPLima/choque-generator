@@ -12,7 +12,7 @@ export default function LandingPage({ onModoSandbox, onModoCenario }: LandingPag
         <div className="flex flex-col items-center gap-8">
           {/* Title */}
           <div className="text-center">
-            <h1 className="font-['Roboto:Bold',sans-serif] text-[#1e2081] text-6xl md:text-7xl mb-2">
+            <h1 className="font-['Roboto:Black',sans-serif] text-[#1e2081] text-6xl md:text-7xl mb-2">
               Choque Generator
             </h1>
             <p className="font-['Roboto:Light',sans-serif] text-[#b8b8b8]">
@@ -25,17 +25,23 @@ export default function LandingPage({ onModoSandbox, onModoCenario }: LandingPag
             <p className="font-['Roboto:Regular',sans-serif]">
               Choque Generator é uma plataforma em fase de testes com o objetivo de ensinar estudantes da saúde sobre as repercussões hemodinâmicas do choque de forma interativa e segura. Para isso, você pode escolher um dos nossos modos para testar suas habilidades, ensinar sua turma ou apenas se divertir com o manejo do choque hemodinâmico.
             </p>
+            <p className="text-sm text-gray-500 mt-4">
+              <span className="font-bold">e.d.</span> = em desenvolvimento
+            </p>
           </div>
 
           {/* Buttons */}
           <div className="flex flex-wrap gap-8 justify-center">
             <button 
-              className="bg-[#1e2081] rounded-[8px] border border-[#2c2c2c] px-6 py-4 hover:bg-[#2a2c9f] transition-colors"
+              className="bg-[#1e2081] rounded-[8px] border border-[#2c2c2c] px-6 py-4 hover:bg-[#2a2c9f] transition-colors relative"
               onClick={onModoCenario}
             >
               <p className="font-['Roboto:Bold',sans-serif] text-neutral-100">
                 Modo Cenários
               </p>
+              <span className="text-xs text-gray-400 font-['Roboto:Regular',sans-serif] absolute -top-2 -right-2 bg-gray-600 px-2 py-1 rounded">
+                e.d.
+              </span>
             </button>
             
             <button 

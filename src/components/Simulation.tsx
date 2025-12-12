@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { PatientData } from '../App';
-import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Trophy, Skull } from 'lucide-react';
 import svgPaths from "../imports/svg-9ump4o6n93";
 
 // Import simulation utilities
-import { SimulationState, ActiveIntervention, FluidBalance } from '@/utils/types';
+import { SimulationState, ActiveIntervention, FluidBalance, VentilationSettings } from '@/utils/types';
 import { 
   UPDATE_INTERVAL_MS, 
   SIM_MINUTES_PER_UPDATE,
@@ -28,6 +28,25 @@ import {
   addUrineOutput,
   estimateUrineOutput 
 } from '@/utils/treatments';
+import {
+  initializeVentilation,
+  performIntubation,
+  updateVentilationSettings,
+  checkVentilatorComplications,
+  performExtubation,
+  calculateVentilationHemodynamicEffects
+} from '@/utils/ventilation';
+import {
+  initializeCriticalStateTracker,
+  updateCriticalStateTracker,
+  evaluateOutcome,
+  generateOutcomeFeedback,
+  trackStability,
+  isPatientStable,
+  PatientOutcome,
+  CriticalStateTracker,
+  OutcomeResult
+} from '@/utils/outcomeSystem';
 
 // Import new components
 import { PatientMonitor } from './PatientMonitor';
@@ -46,29 +65,43 @@ export default function Simulation({ patientData, onBack }: SimulationProps) {
   const [muteAlerts, setMuteAlerts] = useState(false);
 
   // Initialize simulation state
-  const [simulationState, setSimulationState] = useState<SimulationState>(() => ({
-    vitals: initializeVitals(patientData),
-    labs: initializeLabs(patientData),
-    fluidBalance: {
-      totalInput: 0,
-      totalOutput: 0,
-      netBalance: 0,
-      crystalloids: 0,
-      colloids: 0,
-      blood: 0,
-      urine: 0,
-      insensibleLoss: 0,
-    },
-    hemodynamics: initializeHemodynamics(patientData),
-    activeInterventions: [],
-    simTimeElapsed: 0,
-    realTimeElapsed: 0,
-    isStable: false,
-    isDeteriorating: true,
-    complications: [],
-    criticalAlerts: [],
-    warnings: [],
-  }));
+  const [simulationState, setSimulationState] = useState<SimulationState>(() => {
+    const initialLabs = initializeLabs(patientData);
+    return {
+      vitals: initializeVitals(patientData),
+      labs: initialLabs,
+      fluidBalance: {
+        totalInput: 0,
+        totalOutput: 0,
+        netBalance: 0,
+        crystalloids: 0,
+        colloids: 0,
+        blood: 0,
+        urine: 0,
+        insensibleLoss: 0,
+      },
+      hemodynamics: initializeHemodynamics(patientData),
+      activeInterventions: [],
+      ventilation: initializeVentilation(),
+      simTimeElapsed: 0,
+      realTimeElapsed: 0,
+      isStable: false,
+      isDeteriorating: true,
+      complications: [],
+      criticalAlerts: [],
+      warnings: [],
+      stabilityDuration: 0,
+      initialLactate: initialLabs.lactate || 2.0,
+    };
+  });
+
+  // Critical state tracker for death determination
+  const [criticalTracker, setCriticalTracker] = useState<CriticalStateTracker>(
+    initializeCriticalStateTracker()
+  );
+
+  // Outcome state
+  const [outcomeResult, setOutcomeResult] = useState<OutcomeResult | null>(null);
 
   // Fluid inputs
   const [salineAmount, setSalineAmount] = useState('42');
@@ -95,6 +128,21 @@ export default function Simulation({ patientData, onBack }: SimulationProps) {
     newVolume?: number;
   } | null>(null);
 
+  // Speed control
+  const [speedMultiplier, setSpeedMultiplier] = useState(12); // Start at 12x speed
+
+  // Intervention log - track all interventions with timestamps
+  const [interventionLog, setInterventionLog] = useState<Array<{
+    id: string;
+    time: number;
+    name: string;
+    type: 'fluid' | 'vasopressor' | 'inotrope' | 'medication' | 'procedure';
+    dose?: number;
+    rate?: number;
+    volume?: number;
+    status: 'iniciado' | 'finalizado' | 'ativo';
+  }>>([]);
+
   // Collapsed sections state
   const [isColetasCollapsed, setIsColetasCollapsed] = useState(false);
   const [isFluidosCollapsed, setIsFluidosCollapsed] = useState(false);
@@ -105,17 +153,18 @@ export default function Simulation({ patientData, onBack }: SimulationProps) {
   // Main simulation update loop
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (isPlaying) {
+    if (isPlaying && outcomeResult?.outcome === PatientOutcome.ONGOING || !outcomeResult) {
       interval = setInterval(() => {
+        const simMinutesThisUpdate = SIM_MINUTES_PER_UPDATE * speedMultiplier;
         setRealTimeElapsed(prev => prev + (UPDATE_INTERVAL_MS / 1000));
-        setSimTimeElapsed(prev => prev + SIM_MINUTES_PER_UPDATE);
+        setSimTimeElapsed(prev => prev + simMinutesThisUpdate);
         
         setSimulationState(prevState => {
           // Update fluid balance (insensible losses)
           const newFluidBalance = updateFluidBalance(
             prevState.fluidBalance,
             patientData.weight,
-            SIM_MINUTES_PER_UPDATE
+            simMinutesThisUpdate
           );
 
           // Calculate urine output
@@ -145,7 +194,8 @@ export default function Simulation({ patientData, onBack }: SimulationProps) {
             updatedInterventions,
             patientData.shockType,
             patientData.weight,
-            prevState.simTimeElapsed
+            prevState.simTimeElapsed,
+            patientData.conditions // Pass patient conditions for comorbidity effects
           );
 
           // Apply treatment effects to current vitals
@@ -158,24 +208,50 @@ export default function Simulation({ patientData, onBack }: SimulationProps) {
           const newVitals = updateVitals(
             { ...prevState, vitals: vitalsWithTreatments, fluidBalance: balanceWithUrine },
             patientData,
-            SIM_MINUTES_PER_UPDATE
+            simMinutesThisUpdate
           );
 
           // Update labs
           const newLabs = updateLabs(
             prevState.labs,
             newVitals,
-            SIM_MINUTES_PER_UPDATE
+            simMinutesThisUpdate,
+            patientData.shockType
           );
 
           // Detect alerts
           const { criticalAlerts, warnings } = detectAlerts(newVitals);
+          
+          // Add ventilator warnings if intubated
+          const ventWarnings = checkVentilatorComplications(
+            prevState.ventilation,
+            newVitals,
+            patientData.weight
+          );
 
-          // Update hemodynamics
-          const newHemodynamics = {
+          // Update hemodynamics (including ventilation effects)
+          let newHemodynamics = {
             ...prevState.hemodynamics,
             ...treatmentEffects.hemodynamics,
           };
+          
+          if (prevState.ventilation.isIntubated) {
+            const ventEffects = calculateVentilationHemodynamicEffects(
+              prevState.ventilation,
+              newVitals,
+              newHemodynamics,
+              patientData.shockType
+            );
+            newHemodynamics = { ...newHemodynamics, ...ventEffects.hemodynamics };
+          }
+
+          // Check patient stability
+          const currentlyStable = isPatientStable(newVitals, newLabs, patientData.shockType);
+          const newStabilityDuration = trackStability(
+            prevState.stabilityDuration,
+            currentlyStable,
+            simMinutesThisUpdate
+          );
 
           return {
             ...prevState,
@@ -184,16 +260,42 @@ export default function Simulation({ patientData, onBack }: SimulationProps) {
             fluidBalance: balanceWithUrine,
             hemodynamics: newHemodynamics,
             activeInterventions: updatedInterventions,
-            simTimeElapsed: prevState.simTimeElapsed + SIM_MINUTES_PER_UPDATE,
+            simTimeElapsed: prevState.simTimeElapsed + simMinutesThisUpdate,
             realTimeElapsed: prevState.realTimeElapsed + (UPDATE_INTERVAL_MS / 1000),
             criticalAlerts,
-            warnings,
+            warnings: [...warnings, ...ventWarnings],
+            isStable: currentlyStable,
+            stabilityDuration: newStabilityDuration,
           };
         });
+
+        // Update critical state tracker
+        setCriticalTracker(prevTracker => 
+          updateCriticalStateTracker(
+            prevTracker,
+            simulationState.vitals,
+            simulationState.labs,
+            simMinutesThisUpdate
+          )
+        );
+
+        // Evaluate outcome
+        const outcome = evaluateOutcome(
+          simulationState,
+          patientData,
+          criticalTracker,
+          simulationState.stabilityDuration,
+          simulationState.initialLactate
+        );
+
+        if (outcome.outcome !== PatientOutcome.ONGOING) {
+          setOutcomeResult(outcome);
+          setIsPlaying(false); // Stop simulation
+        }
       }, UPDATE_INTERVAL_MS);
     }
     return () => clearInterval(interval);
-  }, [isPlaying, patientData]);
+  }, [isPlaying, patientData, speedMultiplier, simulationState, criticalTracker, outcomeResult]);
 
   const formatSimTime = (simMinutes: number) => {
     const hours = Math.floor(simMinutes / 60);
@@ -216,7 +318,8 @@ export default function Simulation({ patientData, onBack }: SimulationProps) {
         patientData.shockType,
         fluidType,
         volumeMl,
-        patientData.weight
+        patientData.weight,
+        patientData.conditions // Pass patient conditions for comorbidity effects
       );
 
       // Add to fluid balance
@@ -250,6 +353,17 @@ export default function Simulation({ patientData, onBack }: SimulationProps) {
         activeInterventions: [...prevState.activeInterventions, intervention],
       };
     });
+
+    // Add to intervention log
+    const isSingleDoseForLog = name === 'Albumina' || name === 'Concentrado de Hemácias';
+    setInterventionLog(prev => [...prev, {
+      id: `fluid-${Date.now()}`,
+      time: simTimeElapsed,
+      name: name,
+      type: 'fluid',
+      volume: volumeMl,
+      status: isSingleDoseForLog ? 'iniciado' : 'ativo'
+    }]);
   };
 
   // Handler for vasopressor/inotrope
@@ -269,6 +383,16 @@ export default function Simulation({ patientData, onBack }: SimulationProps) {
         activeInterventions: [...prevState.activeInterventions, intervention],
       };
     });
+
+    // Add to intervention log
+    setInterventionLog(prev => [...prev, {
+      id: `drug-${Date.now()}`,
+      time: simTimeElapsed,
+      name: drugName,
+      type: drugType,
+      dose: dose,
+      status: 'iniciado'
+    }]);
   };
 
   // Handler for stopping an intervention
@@ -287,6 +411,15 @@ export default function Simulation({ patientData, onBack }: SimulationProps) {
       ...prevState,
       activeInterventions: prevState.activeInterventions.map(i => {
         if (i.id === interventionId) {
+          // For noradrenalin, use 0.1 increments instead of multiplier
+          if (i.name === 'Noradrenalina') {
+            const increment = direction === 'up' ? 0.1 : -0.1;
+            return {
+              ...i,
+              dose: i.dose ? Math.max(0.1, parseFloat((i.dose + increment).toFixed(1))) : i.dose,
+            };
+          }
+          // For other drugs and fluids, use multiplier
           const multiplier = direction === 'up' ? 1.25 : 0.8;
           return {
             ...i,
@@ -337,6 +470,53 @@ export default function Simulation({ patientData, onBack }: SimulationProps) {
       vci,
       bLines,
     });
+  };
+
+  // Handler for intubation
+  const handleIntubation = () => {
+    if (simulationState.ventilation.isIntubated) {
+      alert('Paciente já está intubado');
+      return;
+    }
+    
+    setSimulationState(prevState => {
+      const newVentilation = performIntubation(
+        patientData.weight,
+        prevState.ventilation,
+        prevState.vitals
+      );
+      
+      return {
+        ...prevState,
+        ventilation: newVentilation,
+      };
+    });
+  };
+
+  // Handler for ventilation settings update
+  const handleVentilationUpdate = (changes: Partial<VentilationSettings>) => {
+    setSimulationState(prevState => ({
+      ...prevState,
+      ventilation: updateVentilationSettings(prevState.ventilation, changes),
+    }));
+  };
+
+  // Handler for extubation
+  const handleExtubation = () => {
+    const result = performExtubation(
+      simulationState.ventilation,
+      simulationState.vitals
+    );
+    
+    if (result.success) {
+      setSimulationState(prevState => ({
+        ...prevState,
+        ventilation: result.ventilation,
+      }));
+      alert(result.message);
+    } else {
+      alert(result.message);
+    }
   };
 
   // Handler for urine output check
@@ -415,13 +595,18 @@ export default function Simulation({ patientData, onBack }: SimulationProps) {
       
       {/* Blue display screen */}
       <div className="absolute bg-[#9ee2ff] border border-black h-[103px] left-[27px] top-[19px] w-[296px]">
-        <div className="flex flex-col justify-center h-full">
-          <p className="text-[#4e4e4e] text-[18px] text-center leading-tight px-2" style={{ fontFamily: 'Courier New, monospace', fontWeight: '900' }}>
+        <div className="flex flex-col justify-center h-full px-3">
+          <p className="text-[#4e4e4e] text-[14px] text-left leading-tight mb-2" style={{ fontFamily: 'Courier New, monospace', fontWeight: '700' }}>
             {label}
           </p>
-          <p className="text-[#4e4e4e] text-[42px] text-center leading-tight mt-1" style={{ fontFamily: 'Courier New, monospace', fontWeight: '900' }}>
-            {rate}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-[#4e4e4e] text-[38px] leading-none" style={{ fontFamily: 'Courier New, monospace', fontWeight: '900' }}>
+              {rate.split(' ')[0]}
+            </p>
+            <p className="text-[#4e4e4e] text-[11px] leading-tight" style={{ fontFamily: 'Courier New, monospace', fontWeight: '600' }}>
+              {rate.split(' ').slice(1).join(' ')}
+            </p>
+          </div>
         </div>
       </div>
       
@@ -466,6 +651,76 @@ export default function Simulation({ patientData, onBack }: SimulationProps) {
 
   return (
     <div className="bg-[#dfdfdf] min-h-screen w-full overflow-x-auto pb-20 pt-0 m-0">
+      {/* Outcome Modal */}
+      {outcomeResult && outcomeResult.outcome !== PatientOutcome.ONGOING && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+          <div className="bg-white rounded-[19px] shadow-2xl p-8 max-w-2xl w-full mx-4">
+            <div className="text-center mb-6">
+              {outcomeResult.outcome === PatientOutcome.SURVIVED ? (
+                <>
+                  <Trophy className="w-24 h-24 text-green-500 mx-auto mb-4" />
+                  <h2 className="text-4xl font-bold text-green-600">PACIENTE SOBREVIVEU!</h2>
+                </>
+              ) : (
+                <>
+                  <Skull className="w-24 h-24 text-red-500 mx-auto mb-4" />
+                  <h2 className="text-4xl font-bold text-red-600">PACIENTE FOI A ÓBITO</h2>
+                </>
+              )}
+            </div>
+            
+            <div className="bg-gray-50 rounded-lg p-6 mb-6">
+              <pre className="whitespace-pre-wrap font-sans text-sm">
+                {generateOutcomeFeedback(outcomeResult, simulationState, patientData)}
+              </pre>
+            </div>
+
+            {/* Critical state summary if patient died */}
+            {outcomeResult.outcome === PatientOutcome.DIED && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <h3 className="font-bold text-red-800 mb-2">Estado Crítico:</h3>
+                <p className="text-sm text-red-700">
+                  • Episódios críticos: {criticalTracker.incompatibleVitalsCount}<br/>
+                  • Tempo total em estado crítico: {criticalTracker.incompatibleVitalsDuration.toFixed(0)} min<br/>
+                  • Tempo desde última recuperação: {criticalTracker.timeSinceLastRecovery.toFixed(0)} min
+                </p>
+              </div>
+            )}
+
+            {/* Stability metrics if patient survived */}
+            {outcomeResult.outcome === PatientOutcome.SURVIVED && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                <h3 className="font-bold text-green-800 mb-2">Estabilidade Alcançada:</h3>
+                <p className="text-sm text-green-700">
+                  • Duração da estabilidade: {simulationState.stabilityDuration.toFixed(0)} min<br/>
+                  • PAM final: {simulationState.vitals.map.toFixed(0)} mmHg<br/>
+                  • Lactato final: {simulationState.labs.lactate.toFixed(1)} mmol/L<br/>
+                  • Débito cardíaco: {simulationState.vitals.cardiacOutput.toFixed(1)} L/min
+                </p>
+              </div>
+            )}
+
+            <div className="flex gap-4">
+              <button
+                onClick={onBack}
+                className="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-bold shadow-lg transition-colors"
+              >
+                Voltar ao Menu
+              </button>
+              <button
+                onClick={() => {
+                  setOutcomeResult(null);
+                  window.location.reload();
+                }}
+                className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-lg transition-colors"
+              >
+                Novo Caso
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-[#ebf5ff] rounded-[19px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] min-h-[2000px] mx-auto mt-0 mb-[45px] w-[1580px] flex gap-8 p-8 pt-20">
         
         {/* LEFT COLUMN */}
@@ -484,8 +739,54 @@ export default function Simulation({ patientData, onBack }: SimulationProps) {
               <div className="text-lg font-bold">{formatRealTime(realTimeElapsed)}</div>
             </div>
             <div className="bg-white px-4 py-2 rounded-lg shadow font-mono">
-              <div className="text-xs text-gray-500">Tempo Simulação (12x)</div>
+              <div className="text-xs text-gray-500">Tempo Simulação ({speedMultiplier}x)</div>
               <div className="text-lg font-bold">{formatSimTime(simTimeElapsed)}</div>
+            </div>
+
+            {/* Patient Status Indicator */}
+            {criticalTracker.reasonsForIncompatibility.length > 0 ? (
+              <div className="bg-red-100 border-2 border-red-500 px-4 py-2 rounded-lg shadow animate-pulse">
+                <div className="text-xs font-bold text-red-700">⚠️ ESTADO CRÍTICO</div>
+                <div className="text-sm text-red-600">{criticalTracker.timeSinceLastRecovery.toFixed(0)} min</div>
+              </div>
+            ) : simulationState.stabilityDuration >= 30 ? (
+              <div className="bg-green-100 border-2 border-green-500 px-4 py-2 rounded-lg shadow">
+                <div className="text-xs font-bold text-green-700">✓ ESTÁVEL</div>
+                <div className="text-sm text-green-600">{simulationState.stabilityDuration.toFixed(0)} min</div>
+              </div>
+            ) : (
+              <div className="bg-yellow-100 border-2 border-yellow-500 px-4 py-2 rounded-lg shadow">
+                <div className="text-xs font-bold text-yellow-700">⚡ INSTÁVEL</div>
+                <div className="text-sm text-yellow-600">Monitorar</div>
+              </div>
+            )}
+            
+            {/* Speed Control */}
+            <div className="bg-white px-4 py-2 rounded-lg shadow">
+              <div className="text-xs text-gray-500 mb-1">Velocidade</div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSpeedMultiplier(Math.max(1, speedMultiplier - 1))}
+                  className="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm font-bold"
+                >
+                  -
+                </button>
+                <input
+                  type="range"
+                  min="1"
+                  max="100"
+                  value={speedMultiplier}
+                  onChange={(e) => setSpeedMultiplier(Number(e.target.value))}
+                  className="w-24"
+                />
+                <button
+                  onClick={() => setSpeedMultiplier(Math.min(100, speedMultiplier + 1))}
+                  className="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm font-bold"
+                >
+                  +
+                </button>
+                <span className="text-sm font-bold w-12 text-center">{speedMultiplier}x</span>
+              </div>
             </div>
             <button
               onClick={() => setIsPlaying(!isPlaying)}
@@ -878,16 +1179,112 @@ export default function Simulation({ patientData, onBack }: SimulationProps) {
           {!isProcedimentosCollapsed && (
           <div className="space-y-4">
             {/* Intubação Orotraqueal */}
-            <div className="border border-[#d9d9d9] rounded-[9px] p-4 h-[85px] flex items-center justify-between">
-              <p className="font-['Inter:Regular',sans-serif] text-[20px] text-black flex-1">
-                Intubação Orotraqueal
-              </p>
-              <button 
-                onClick={() => alert('Intubação realizada')}
-                className="bg-[#1e2081] rounded-[8px] px-6 py-3 hover:bg-[#2a2c9f] transition-colors"
-              >
-                <p className="font-['Inter:Bold',sans-serif] text-neutral-100">Realizar</p>
-              </button>
+            <div className="border border-[#d9d9d9] rounded-[9px] p-4 min-h-[85px] flex flex-col justify-center gap-2">
+              <div className="flex items-center justify-between">
+                <p className="font-['Inter:Regular',sans-serif] text-[20px] text-black flex-1">
+                  Intubação Orotraqueal (IOT)
+                </p>
+                <button 
+                  onClick={handleIntubation}
+                  disabled={simulationState.ventilation.isIntubated}
+                  className={`rounded-[8px] px-6 py-3 transition-colors ${
+                    simulationState.ventilation.isIntubated
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-[#1e2081] hover:bg-[#2a2c9f]'
+                  }`}
+                >
+                  <p className="font-['Inter:Bold',sans-serif] text-neutral-100">
+                    {simulationState.ventilation.isIntubated ? 'Intubado' : 'Realizar'}
+                  </p>
+                </button>
+              </div>
+              
+              {/* Ventilation Settings - Only show if intubated */}
+              {simulationState.ventilation.isIntubated && (
+                <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <label className="block text-gray-600 mb-1">Modo:</label>
+                      <select 
+                        value={simulationState.ventilation.mode || 'VCV'}
+                        onChange={(e) => handleVentilationUpdate({ mode: e.target.value as any })}
+                        className="w-full border rounded px-2 py-1"
+                      >
+                        <option value="VCV">VCV</option>
+                        <option value="PCV">PCV</option>
+                        <option value="PSV">PSV</option>
+                        <option value="SIMV">SIMV</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-gray-600 mb-1">VC (mL): {simulationState.ventilation.tidalVolume}</label>
+                      <input 
+                        type="range"
+                        min="200"
+                        max="600"
+                        step="50"
+                        value={simulationState.ventilation.tidalVolume}
+                        onChange={(e) => handleVentilationUpdate({ tidalVolume: Number(e.target.value) })}
+                        className="w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-600 mb-1">FR (rpm): {simulationState.ventilation.respiratoryRate}</label>
+                      <input 
+                        type="range"
+                        min="8"
+                        max="24"
+                        step="2"
+                        value={simulationState.ventilation.respiratoryRate}
+                        onChange={(e) => handleVentilationUpdate({ respiratoryRate: Number(e.target.value) })}
+                        className="w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-600 mb-1">PEEP (cmH₂O): {simulationState.ventilation.peep}</label>
+                      <input 
+                        type="range"
+                        min="0"
+                        max="15"
+                        step="1"
+                        value={simulationState.ventilation.peep}
+                        onChange={(e) => handleVentilationUpdate({ peep: Number(e.target.value) })}
+                        className="w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-600 mb-1">FiO₂ (%): {Math.round(simulationState.ventilation.fio2 * 100)}</label>
+                      <input 
+                        type="range"
+                        min="21"
+                        max="100"
+                        step="5"
+                        value={Math.round(simulationState.ventilation.fio2 * 100)}
+                        onChange={(e) => handleVentilationUpdate({ fio2: Number(e.target.value) / 100 })}
+                        className="w-full"
+                      />
+                    </div>
+                    <div className="flex flex-col justify-end">
+                      <button 
+                        onClick={handleExtubation}
+                        className="bg-orange-600 hover:bg-orange-700 text-white rounded px-3 py-1 text-sm"
+                      >
+                        Extubar
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Ventilator Readings */}
+                  <div className="bg-gray-50 rounded p-2 text-xs space-y-1">
+                    <p><strong>Ppico:</strong> {simulationState.ventilation.peakPressure} cmH₂O</p>
+                    <p><strong>Pplatô:</strong> {simulationState.ventilation.plateauPressure} cmH₂O</p>
+                    <p><strong>Driving Pressure:</strong> {(simulationState.ventilation.plateauPressure || 0) - simulationState.ventilation.peep} cmH₂O</p>
+                    <p className="text-gray-600 italic">
+                      ⚠️ IOT ↓ Retorno Venoso → ↓ DC (especialmente em hipovolemia)
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Passive Leg-Raise */}
@@ -929,7 +1326,16 @@ export default function Simulation({ patientData, onBack }: SimulationProps) {
                 Iniciar antibióticos
               </p>
               <button 
-                onClick={() => alert('Antibióticos iniciados')}
+                onClick={() => {
+                  setInterventionLog(prev => [...prev, {
+                    id: `med-${Date.now()}`,
+                    time: simTimeElapsed,
+                    name: 'Antibióticos',
+                    type: 'medication',
+                    status: 'iniciado'
+                  }]);
+                  alert('Antibióticos iniciados');
+                }}
                 className="bg-[#1e2081] rounded-[8px] px-6 py-3 hover:bg-[#2a2c9f] transition-colors"
               >
                 <p className="font-['Inter:Bold',sans-serif] text-neutral-100">Realizar</p>
@@ -942,7 +1348,16 @@ export default function Simulation({ patientData, onBack }: SimulationProps) {
                 Reposição de potássio
               </p>
               <button 
-                onClick={() => alert('Reposição de potássio realizada')}
+                onClick={() => {
+                  setInterventionLog(prev => [...prev, {
+                    id: `med-${Date.now()}`,
+                    time: simTimeElapsed,
+                    name: 'Reposição de K+',
+                    type: 'medication',
+                    status: 'iniciado'
+                  }]);
+                  alert('Reposição de potássio realizada');
+                }}
                 className="bg-[#1e2081] rounded-[8px] px-6 py-3 hover:bg-[#2a2c9f] transition-colors"
               >
                 <p className="font-['Inter:Bold',sans-serif] text-neutral-100">Realizar</p>
@@ -955,7 +1370,16 @@ export default function Simulation({ patientData, onBack }: SimulationProps) {
                 Reposição de sódio
               </p>
               <button 
-                onClick={() => alert('Reposição de sódio realizada')}
+                onClick={() => {
+                  setInterventionLog(prev => [...prev, {
+                    id: `med-${Date.now()}`,
+                    time: simTimeElapsed,
+                    name: 'Reposição de Na+',
+                    type: 'medication',
+                    status: 'iniciado'
+                  }]);
+                  alert('Reposição de sódio realizada');
+                }}
                 className="bg-[#1e2081] rounded-[8px] px-6 py-3 hover:bg-[#2a2c9f] transition-colors"
               >
                 <p className="font-['Inter:Bold',sans-serif] text-neutral-100">Realizar</p>

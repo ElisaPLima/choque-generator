@@ -61,6 +61,7 @@ npm run dev
 
 ## 📊 Recursos
 
+### Implementados
 - ✅ Fisiologia cardiovascular realista
 - ✅ Sistema de randomização para variabilidade
 - ✅ Monitoramento hemodinâmico contínuo
@@ -68,6 +69,15 @@ npm run dev
 - ✅ Alertas críticos e avisos
 - ✅ Bombas de infusão virtuais
 - ✅ Análises laboratoriais
+- ✅ Controle de velocidade da simulação (1x a 100x)
+- ✅ Modo Sandbox (criação livre de pacientes)
+
+### Em Desenvolvimento (e.d.)
+- 🔄 Modo Cenários (casos clínicos pré-configurados)
+- 🔄 Sistema de níveis de recursos hospitalares
+- 🔄 Distúrbios hidroeletrolíticos avançados
+- 🔄 Intubação orotraqueal (IOT) e ventilação mecânica
+- 🔄 Sistema de salvamento e exportação de casos
 
 ## 🎯 Objetivos Educacionais
 
